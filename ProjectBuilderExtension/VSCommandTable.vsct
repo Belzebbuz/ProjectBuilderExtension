@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Include href="KnownImageIds.vsct"/>
+  <Include href="VSGlobals.vsct"/>
+
+  <Commands package="ProjectBuilderExtension">
+    <Groups>
+      <Group guid="ProjectBuilderExtension" id="MyMenuGroup" priority="0x0600">
+        <Parent guid="VSMainMenu" id="ProjectNode"/>
+      </Group>
+    </Groups>
+
+    <!--This section defines the elements the user can interact with, like a menu command or a button
+        or combo box in a toolbar. -->
+    <Buttons>
+      <Button guid="ProjectBuilderExtension" id="BuildAndSendProjectCommand" priority="0x0100" type="Button">
+        <Parent guid="ProjectBuilderExtension" id="MyMenuGroup" />
+        <Icon guid="ImageCatalogGuid" id="Send" />
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings>
+          <ButtonText>Build release and send</ButtonText>
+          <LocCanonicalName>.ProjectBuilderExtension.BuildAndSendProjectCommand</LocCanonicalName>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="ProjectBuilderExtension" value="{75f672cd-6701-4b0f-8c61-07723ba99377}">
+      <IDSymbol name="MyMenuGroup" value="0x0001" />
+      <IDSymbol name="BuildAndSendProjectCommand" value="0x0100" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

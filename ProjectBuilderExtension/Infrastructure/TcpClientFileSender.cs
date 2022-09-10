@@ -1,0 +1,88 @@
+﻿using BeetleX.Buffers;
+using BeetleX;
+using BeetleX.Clients;
+using ProjectUpdater.Tcp.Messages;
+using System.Threading.Tasks;
+
+namespace ProjectBuilderExtension.Infrastructure
+{
+	public class TcpClientFileSender
+	{
+		public event EventClientError OnClientError;
+		public event EventHandler<FileSendedEventArgs> OnBlockSended;
+		public event EventHandler<FileSendedEventArgs> OnSendingComplite;
+
+
+		private AsyncTcpClient _tcpClient;
+		private DateTime _startUploadTime;
+		public TcpClientFileSender(string address, string port)
+		{
+			BufferPool.BUFFER_SIZE = 1024 * 8;
+			_tcpClient = SocketFactory.CreateClient<AsyncTcpClient, ProtobufClientPacket>(address, int.Parse(port));
+			_tcpClient.ClientError = (o, err) => OnClientError?.Invoke(o, err);
+		}
+
+		public async Task<bool> IsConnectAsync()
+		{
+			var connectResult = await _tcpClient.Connect();
+			return connectResult.Connected;
+		}
+
+		public void Disconnect()
+		{
+			try
+			{
+				_tcpClient.DisConnect();
+			}
+			catch { }
+		}
+
+		/// <summary>
+		/// Начинает отправку файла
+		/// </summary>
+		/// <param name="filePath">Путь к файлу</param>
+		/// <param name="sessionGuid">Уникальный идентификатор сессии</param>
+		/// <returns>Количество блоков в файле</returns>
+		public int StartSendFile(string filePath, Guid sessionGuid)
+		{
+			var reader = new FileReader(filePath, sessionGuid);
+			_tcpClient["file"] = reader;
+			var block = reader.Next();
+			block.Completed = OnCompleted;
+			_tcpClient.Send(block);
+			_startUploadTime = DateTime.Now;
+			return reader.Pages;
+		}
+
+		private void OnCompleted(FileContentBlock e)
+		{
+			var reader = (FileReader)_tcpClient["file"];
+			if (!reader.Completed)
+			{
+				OnBlockSended?.Invoke(this, new FileSendedEventArgs(reader.Index));
+				Task.Run(() =>
+				{
+					var block = reader.Next();
+					block.Completed = OnCompleted;
+					_tcpClient.Send(block);
+				});
+			}
+			else
+			{
+				reader.Dispose();
+				OnSendingComplite?.Invoke(this, new FileSendedEventArgs(reader.Index) { CompliteTime = DateTime.Now - _startUploadTime});
+			}
+		}
+	}
+
+	public class FileSendedEventArgs : EventArgs
+	{
+		public FileSendedEventArgs(int blockIndex)
+		{
+			BlockIndex = blockIndex;
+		}
+
+		public int BlockIndex { get; private set; }
+		public TimeSpan CompliteTime { get; set; }
+	}
+}
