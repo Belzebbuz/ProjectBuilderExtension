@@ -16,25 +16,26 @@ namespace ProjectBuilderExtension
 {
 	public partial class SendingSettingWindow : Form
 	{
-		private string _tempPath = Path.GetTempPath();
+		private readonly string _tempPath;
 		private string _buildOutputPath = String.Empty;
 		private string _zipFilePath = String.Empty;
 		private const string _powerShell = "powershell";
 		private const string _buildCommand = "dotnet build -c Release";
 		private readonly SendingSettingWindowOptions _options;
-		private readonly Guid _projectGuid = Guid.NewGuid();
 		private TcpClientFileSender _tcpClient;
 		public SendingSettingWindow(SendingSettingWindowOptions options)
 		{
 			InitializeComponent();
-			CenterToScreen();
 			_options = options;
+			_tempPath = Path.Combine(Path.GetDirectoryName(_options.ProjectFullPath), @"bin\Temp");
+
 			projectNameTextBox.Text = options.ProjectName;
+			buildCommandTextBox.Text = _buildCommand;
 		}
 
 		protected override void OnClosed(EventArgs e)
 		{
-			if(_tcpClient != null)
+			if (_tcpClient != null)
 				_tcpClient.Disconnect();
 
 			base.OnClosed(e);
@@ -42,9 +43,9 @@ namespace ProjectBuilderExtension
 
 		private void DeleteResources()
 		{
-			if (Directory.Exists(_buildOutputPath))
+			if (Directory.Exists(_tempPath))
 			{
-				Directory.Delete(_buildOutputPath, true);
+				Directory.Delete(_tempPath, true);
 			}
 
 			if (File.Exists(_zipFilePath))
@@ -56,10 +57,10 @@ namespace ProjectBuilderExtension
 		private async Task<(bool Succeded, string BuildLog)> BuildProjectAsync(string buildPath, string sourcePath)
 		{
 			var cmdResult = await Cli.Wrap(_powerShell)
-					.WithArguments(new[] { _buildCommand, sourcePath, "-o", buildPath })
+					.WithArguments(new[] { buildCommandTextBox.Text, $"\"{sourcePath}\"", "-o", $"\"{buildPath}\"" })
 					.WithValidation(CommandResultValidation.None)
 					.ExecuteBufferedAsync();
-			return (cmdResult.StandardOutput.Contains("Build succeeded") || cmdResult.StandardOutput.Contains("Сборка успешно завершена"),
+			return (cmdResult.StandardOutput.Contains("Build succeeded") || cmdResult.StandardOutput.Contains("Сборка успешно завершена") || cmdResult.ExitCode == 0,
 					cmdResult.StandardOutput);
 		}
 
@@ -72,10 +73,14 @@ namespace ProjectBuilderExtension
 		{
 			try
 			{
+				this.Text = "Проверка доступности сервера";
+
 				SetEnableUIElements(false);
 				_tcpClient = ConfigureClient();
 				if (!await _tcpClient.IsConnectAsync())
 					throw new Exception("Сервер недоступен!");
+
+				this.Text = "Сборка проекта";
 
 				_buildOutputPath = Path.Combine(_tempPath, _options.ProjectName);
 				var buildResult = await BuildProjectAsync(_buildOutputPath, _options.ProjectFullPath);
@@ -84,12 +89,16 @@ namespace ProjectBuilderExtension
 
 				var assemblyVersion = GetFileVersion(_buildOutputPath, _options.ProjectName);
 
+				this.Text = "Архивация сборки";
+
 				var finalProjectName = string.IsNullOrEmpty(projectNameTextBox.Text) ? _options.ProjectName : projectNameTextBox.Text;
 				finalProjectName = string.IsNullOrEmpty(assemblyVersion) ? finalProjectName : $"{finalProjectName} - v{assemblyVersion}";
 				_zipFilePath = Path.Combine(_tempPath, $"{finalProjectName}.zip");
 				ZipFiles(_zipFilePath, _buildOutputPath);
 
-				progressBar.Maximum = _tcpClient.StartSendFile(_zipFilePath, _projectGuid);
+				this.Text = "Отправка на сервер";
+
+				progressBar.Maximum = _tcpClient.StartSendFile(_zipFilePath);
 			}
 			catch (Exception ex)
 			{
@@ -104,6 +113,7 @@ namespace ProjectBuilderExtension
 			serverNameTextBox.Enabled = isEnable;
 			serverPortTextBox.Enabled = isEnable;
 			projectNameTextBox.Enabled = isEnable;
+			buildCommandTextBox.Enabled = isEnable;
 			sendButton.Enabled = isEnable;
 		}
 
@@ -116,6 +126,7 @@ namespace ProjectBuilderExtension
 				{
 					errorLabel.ForeColor = Color.Red;
 					errorLabel.Text = err.Error.Message;
+					progressBar.Value = 0;
 					SetEnableUIElements(true);
 					DeleteResources();
 				}));
@@ -135,6 +146,7 @@ namespace ProjectBuilderExtension
 				{
 					DeleteResources();
 					errorLabel.Text = $"Сборка загружена！[{args.CompliteTime}]";
+					this.Text = "Сборка загружена на сервер";
 					progressBar.Value = args.BlockIndex;
 				}));
 			};

@@ -3,6 +3,7 @@ using BeetleX;
 using BeetleX.Clients;
 using ProjectUpdater.Tcp.Messages;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace ProjectBuilderExtension.Infrastructure
 {
@@ -12,14 +13,20 @@ namespace ProjectBuilderExtension.Infrastructure
 		public event EventHandler<FileSendedEventArgs> OnBlockSended;
 		public event EventHandler<FileSendedEventArgs> OnSendingComplite;
 
-
+		private readonly ConcurrentDictionary<string, FileReader> _files = new ConcurrentDictionary<string, FileReader>(StringComparer.OrdinalIgnoreCase);
 		private AsyncTcpClient _tcpClient;
 		private DateTime _startUploadTime;
+		private readonly string _sessionGuid = Guid.NewGuid().ToString();
 		public TcpClientFileSender(string address, string port)
 		{
 			BufferPool.BUFFER_SIZE = 1024 * 8;
 			_tcpClient = SocketFactory.CreateClient<AsyncTcpClient, ProtobufClientPacket>(address, int.Parse(port));
-			_tcpClient.ClientError = (o, err) => OnClientError?.Invoke(o, err);
+			_tcpClient.ClientError = (o, err) =>
+			{
+				var reader = _files[_sessionGuid];
+				reader?.Dispose();
+				OnClientError?.Invoke(o, err);
+			};
 		}
 
 		public async Task<bool> IsConnectAsync()
@@ -41,12 +48,11 @@ namespace ProjectBuilderExtension.Infrastructure
 		/// Начинает отправку файла
 		/// </summary>
 		/// <param name="filePath">Путь к файлу</param>
-		/// <param name="sessionGuid">Уникальный идентификатор сессии</param>
 		/// <returns>Количество блоков в файле</returns>
-		public int StartSendFile(string filePath, Guid sessionGuid)
+		public int StartSendFile(string filePath)
 		{
-			var reader = new FileReader(filePath, sessionGuid);
-			_tcpClient["file"] = reader;
+			var reader = new FileReader(filePath, Guid.Parse(_sessionGuid));
+			_files[_sessionGuid] = reader;
 			var block = reader.Next();
 			block.Completed = OnCompleted;
 			_tcpClient.Send(block);
@@ -56,13 +62,15 @@ namespace ProjectBuilderExtension.Infrastructure
 
 		private void OnCompleted(FileContentBlock e)
 		{
-			var reader = (FileReader)_tcpClient["file"];
+			var reader = _files[_sessionGuid];
 			if (!reader.Completed)
 			{
 				OnBlockSended?.Invoke(this, new FileSendedEventArgs(reader.Index));
 				Task.Run(() =>
 				{
 					var block = reader.Next();
+					if (block == null)
+						return;
 					block.Completed = OnCompleted;
 					_tcpClient.Send(block);
 				});

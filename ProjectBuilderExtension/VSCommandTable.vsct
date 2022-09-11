@@ -21,7 +21,7 @@
         <Icon guid="ImageCatalogGuid" id="Send" />
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings>
-          <ButtonText>Build release and send</ButtonText>
+          <ButtonText>Собрать и отправить на сервер</ButtonText>
           <LocCanonicalName>.ProjectBuilderExtension.BuildAndSendProjectCommand</LocCanonicalName>
         </Strings>
       </Button>

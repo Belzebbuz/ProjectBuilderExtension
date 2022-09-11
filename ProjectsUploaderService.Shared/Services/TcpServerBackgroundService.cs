@@ -13,7 +13,7 @@ namespace ProjectsUploaderService.Shared.Services
 		private readonly IServer _serverDownload;
 		public TcpServerBackgroundService(IConfiguration configuration)
 		{
-			_serverDownload = SocketFactory.CreateTcpServer(new TcpServerDownloadHandler(configuration["ReleasesFolder"]), new ProtobufPacket());
+			_serverDownload = SocketFactory.CreateTcpServer(new TcpServerDownloadHandler(configuration), new ProtobufPacket());
 			_serverDownload.Options.LogLevel = LogType.Warring;
 			_serverDownload.Options.BufferSize = 1024 * 8;
 			_serverDownload.Options.DefaultListen.Port = int.Parse(configuration["TcpDownloadListenPort"]);

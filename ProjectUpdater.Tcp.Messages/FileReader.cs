@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace ProjectUpdater.Tcp.Messages
@@ -61,7 +62,15 @@ namespace ProjectUpdater.Tcp.Messages
 				data = mBuffer;
 			}
 			CompletedSize += data.Length;
-			mReader.Read(data, 0, data.Length);
+
+			if (mReader.CanRead)
+			{
+				mReader.Read(data, 0, data.Length);
+			}
+			else
+			{
+				return null;
+			}
 			result.Index = mIndex;
 			result.Data = data;
 			mIndex++;
