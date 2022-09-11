@@ -10,70 +10,70 @@ namespace ProjectUpdater.Tcp.Messages
 	{
 		public FileReader(string file, Guid appId)
 		{
-			mInfo = new FileInfo(file);
+			_fileInfo = new FileInfo(file);
 			AppId = appId;
-			mPages = (int)(mInfo.Length / mSize);
-			if (mInfo.Length % mSize > 0)
-				mPages++;
-			FileSize = mInfo.Length;
-			mBuffer = new byte[mSize];
-			mReader = mInfo.OpenRead();
+			_blocksCount = (int)(_fileInfo.Length / _blockSize);
+			if (_fileInfo.Length % _blockSize > 0)
+				_blocksCount++;
+			FileSize = _fileInfo.Length;
+			_buffer = new byte[_blockSize];
+			_memoryReader = _fileInfo.OpenRead();
 		}
 
 		private Guid AppId;
 
-		private Stream mReader;
+		private Stream _memoryReader;
 
-		private byte[] mBuffer;
+		private byte[] _buffer;
 
-		private FileInfo mInfo;
+		private FileInfo _fileInfo;
 
-		private int mPages;
+		private int _blocksCount;
 
-		private int mSize = 1024 * 16;
+		private int _blockSize = 1024 * 16;
 
-		private int mIndex;
+		private int _blockIndex;
 
-		public int Index => mIndex;
+		public int Index => _blockIndex;
 
-		public int Size => mSize;
+		public int Size => _blockSize;
 
-		public int Pages => mPages;
+		public int BlocksCount => _blocksCount;
 
 		public long FileSize { get; private set; }
 
 		public long CompletedSize { get; private set; }
 
-		public bool Completed => mIndex == mPages;
+		public bool Completed => _blockIndex == _blocksCount;
 
 		public FileContentBlock Next()
 		{
 			FileContentBlock result = new FileContentBlock();
-			result.FileName = mInfo.Name;
+			result.FileName = _fileInfo.Name;
 			result.AppId = AppId;
 			byte[] data;
-			if (mIndex == mPages - 1)
+			if (_blockIndex == _blocksCount - 1)
 			{
-				data = new byte[mInfo.Length - mIndex * mSize];
+				data = new byte[_fileInfo.Length - _blockIndex * _blockSize];
 				result.Eof = true;
 			}
 			else
 			{
-				data = mBuffer;
+				data = _buffer;
 			}
 			CompletedSize += data.Length;
 
-			if (mReader.CanRead)
+			if (_memoryReader.CanRead)
 			{
-				mReader.Read(data, 0, data.Length);
+				_memoryReader.Read(data, 0, data.Length);
 			}
 			else
 			{
 				return null;
 			}
-			result.Index = mIndex;
+			result.Index = _blockIndex;
 			result.Data = data;
-			mIndex++;
+			_blockIndex++;
 
 
 			return result;
@@ -81,7 +81,7 @@ namespace ProjectUpdater.Tcp.Messages
 
 		public void Dispose()
 		{
-			mReader.Dispose();
+			_memoryReader.Dispose();
 		}
 	}
 

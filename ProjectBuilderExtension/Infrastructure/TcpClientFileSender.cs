@@ -57,7 +57,7 @@ namespace ProjectBuilderExtension.Infrastructure
 			block.Completed = OnCompleted;
 			_tcpClient.Send(block);
 			_startUploadTime = DateTime.Now;
-			return reader.Pages;
+			return reader.BlocksCount;
 		}
 
 		private void OnCompleted(FileContentBlock e)
