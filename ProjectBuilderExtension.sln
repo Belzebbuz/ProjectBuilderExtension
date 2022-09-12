@@ -5,13 +5,18 @@ VisualStudioVersion = 17.3.32825.248
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectBuilderExtension", "ProjectBuilderExtension\ProjectBuilderExtension.csproj", "{C28312C5-5EDF-4DF5-BD06-8DC70ACD9E57}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectUpdater.Tcp.Messages", "ProjectUpdater.Tcp.Messages\ProjectUpdater.Tcp.Messages.csproj", "{E2154AF8-2E09-428A-9C1A-C49C36587363}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProjectUpdater.Tcp.Messages", "ProjectUpdater.Tcp.Messages\ProjectUpdater.Tcp.Messages.csproj", "{E2154AF8-2E09-428A-9C1A-C49C36587363}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectsUploaderService", "ProjectsUploaderService\ProjectsUploaderService.csproj", "{7B6D6B85-5844-4E8B-8262-6F8F39553E58}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProjectsUploaderService", "ProjectsUploaderService\ProjectsUploaderService.csproj", "{7B6D6B85-5844-4E8B-8262-6F8F39553E58}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectsUploaderService.Shared", "ProjectsUploaderService.Shared\ProjectsUploaderService.Shared.csproj", "{CACB889E-1686-4BE3-9FE7-FE1A5FCCCDBA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProjectsUploaderService.Shared", "ProjectsUploaderService.Shared\ProjectsUploaderService.Shared.csproj", "{CACB889E-1686-4BE3-9FE7-FE1A5FCCCDBA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectsUploaderService3.1", "ProjectsUploaderService3.1\ProjectsUploaderService3.1.csproj", "{F606C5BE-8E15-4D95-9AFD-0FFBB98BA026}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProjectsUploaderService3.1", "ProjectsUploaderService3.1\ProjectsUploaderService3.1.csproj", "{F606C5BE-8E15-4D95-9AFD-0FFBB98BA026}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{08430E86-1638-4C13-8209-15602CE793B7}"
+	ProjectSection(SolutionItems) = preProject
+		GitVersion.yml = GitVersion.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
