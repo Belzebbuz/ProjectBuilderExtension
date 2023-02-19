@@ -1,27 +1,24 @@
 ﻿using BeetleX;
-using Microsoft.Extensions.Configuration;
-using ProjectsUploaderService.Shared.Factories;
 using ProjectUpdater.Tcp.Messages;
-using Serilog.Core;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using ProjectsUploaderService.Shared.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace ProjectsUploaderService.Shared.Services
 {
-	public class TcpServerDownloadHandler : ServerHandlerBase
+	public class TcpServerUploadHandler : ServerHandlerBase
 	{
+		private readonly ILogger<TcpServerUploadHandler> _logger;
 		private readonly string _releaseFolderPath;
 		private readonly string _testDownloadFolderPath;
 		private readonly ConcurrentDictionary<string, FileTransfer> _fileStreams = new ConcurrentDictionary<string, FileTransfer>(StringComparer.OrdinalIgnoreCase);
-		private readonly IConfiguration _configuration;
-		private readonly Logger _logger;
-		public TcpServerDownloadHandler(IConfiguration configuration)
+		public TcpServerUploadHandler(UploadSettings settings, ILogger<TcpServerUploadHandler> logger)
 		{
-			_releaseFolderPath = configuration["ReleasesFolder"];
-			_testDownloadFolderPath = configuration["TestBuildsFolder"];
-			_configuration = configuration;
-			_logger = new LogFactory().CreateLogger(configuration["LogPath"]);
+			_logger = logger;
+			_releaseFolderPath = settings.ReleasesPath;
+			_testDownloadFolderPath = settings.TestPath;
 		}
 
 		protected override void OnReceiveMessage(IServer server, ISession session, object message)
@@ -30,7 +27,7 @@ namespace ProjectsUploaderService.Shared.Services
 			{
 				try
 				{
-					string path = GetDownloadPath(block);
+					string path = GetUploadPath(block);
 					_fileStreams.TryGetValue(block.AppId.ToString(), out FileTransfer value);
 
 					if (block.Index == 0)
@@ -49,15 +46,14 @@ namespace ProjectsUploaderService.Shared.Services
 				catch (Exception ex)
 				{
 					session?.Dispose();
-					_logger.Error($"{ex.Message}\n{ex.StackTrace}");
-					throw ex;
+					_logger.LogError(ex.Message);
 				}
 
 			}
 			base.OnReceiveMessage(server, session, message);
 		}
 
-		private string GetDownloadPath(FileContentBlock block)
+		private string GetUploadPath(FileContentBlock block)
 		{
 			return block.FileName.ToLower().StartsWith("test") 
 				? Path.Combine(_testDownloadFolderPath, block.FileName)

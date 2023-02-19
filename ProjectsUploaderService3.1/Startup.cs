@@ -1,15 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using ProjectsUploaderService.Shared.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using ProjectsUploaderService.Shared.Settings;
+using ProjectsUploaderService3._1.Contracts;
+using ProjectsUploaderService3._1.Services;
+using ProjectsUploaderService3._1.Services.Settings;
 
 namespace ProjectsUploaderService3._1
 {
@@ -24,7 +22,13 @@ namespace ProjectsUploaderService3._1
 
 		public void ConfigureServices(IServiceCollection services)
 		{
+			var securitySettings = Configuration.GetSection(nameof(SecuritySettings)).Get<SecuritySettings>();
+			var uploadSettings = Configuration.GetSection(nameof(UploadSettings)).Get<UploadSettings>();
 			services.AddHostedService<TcpServerBackgroundService>();
+			services.AddScoped<ITokenService, TokenService>();
+			services.AddSingleton(uploadSettings);
+			services.AddSingleton(securitySettings);
+			services.AddAuth(securitySettings);
 			services.AddControllers();
 		}
 
@@ -36,9 +40,8 @@ namespace ProjectsUploaderService3._1
 			}
 
 			app.UseRouting();
-
+			app.UseAuthentication();
 			app.UseAuthorization();
-
 			app.UseEndpoints(endpoints =>
 			{
 				endpoints.MapControllers();

@@ -13,8 +13,8 @@ namespace ProjectBuilderExtension.Infrastructure
 		public event EventHandler<FileSendedEventArgs> OnBlockSended;
 		public event EventHandler<FileSendedEventArgs> OnSendingComplite;
 
-		private readonly ConcurrentDictionary<string, FileReader> _files = new ConcurrentDictionary<string, FileReader>(StringComparer.OrdinalIgnoreCase);
-		private AsyncTcpClient _tcpClient;
+		private readonly ConcurrentDictionary<string, FileReader> _files = new (StringComparer.OrdinalIgnoreCase);
+		private readonly AsyncTcpClient _tcpClient;
 		private DateTime _startUploadTime;
 		private readonly string _sessionGuid = Guid.NewGuid().ToString();
 		public TcpClientFileSender(string address, string port)
