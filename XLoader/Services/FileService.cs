@@ -14,17 +14,17 @@ namespace XLoader.Services
 	{
 		private readonly Options _options;
 		private readonly HttpClient _client;
-
+		private object _locker = new object();
 		public FileService(IHttpClientFactory httpClientFactory, Options options)
 		{
 			_options = options;
 			_client = httpClientFactory.CreateClient("Server");
 		}
-		public async Task<IDictionary<int,string>> GetFiles(string name)
+		public async Task<IDictionary<int, string>> GetFilesAsync(string name, bool isTest)
 		{
 			try
 			{
-				var response = await _client.GetAsync($"files/search/{name}");
+				var response = await _client.GetAsync($"files/search/{name}/{isTest}");
 				var result = await response.Content.ReadAsStringAsync();
 				if (response.IsSuccessStatusCode)
 				{
@@ -45,43 +45,47 @@ namespace XLoader.Services
 			}
 		}
 
-		public async Task<string> DownloadAsync(string name)
+		public async Task<string> DownloadAsync(string name, bool isTest)
 		{
-			if(!Directory.Exists(_options.OutputDirectory))
-				Directory.CreateDirectory(_options.OutputDirectory);
-
+			CreateFolder();
 			var fullFilePath = Path.Combine(_options.OutputDirectory, name);
-
-			var response = await _client.GetAsync($"files/download/{name}", HttpCompletionOption.ResponseHeadersRead);
+			var response = await _client.GetAsync($"files/download/{name}/{isTest}", HttpCompletionOption.ResponseHeadersRead);
 			if (!response.IsSuccessStatusCode)
 			{
 				Console.WriteLine($"Status code: {response.StatusCode}");
 				return "Error";
 			}
 			var contentLength = response.Content.Headers.ContentLength ?? -1L;
+			await using var stream = await response.Content.ReadAsStreamAsync();
+			await using var fileStream = File.OpenWrite(fullFilePath);
+			IProgress<long> progress = new Progress<long>(value => HandleProgressReport(name, value, contentLength));
 			var buffer = new byte[81920];
 			var bytesDownloaded = 0L;
-			await using var stream = await response.Content.ReadAsStreamAsync();
-			await using var fileStream = new FileStream(fullFilePath, FileMode.Create, FileAccess.Write);
-			var progress = new Progress<long>(value =>
-			{
-				bytesDownloaded = value;
-				Console.Write($"\rСкачано {bytesDownloaded} байт из {contentLength} ({(double)bytesDownloaded / contentLength:P2})");
-			});
-
 			while (true)
 			{
 				var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
 				if (bytesRead == 0)
-				{
 					break;
-				}
 
 				await fileStream.WriteAsync(buffer, 0, bytesRead);
 				bytesDownloaded += bytesRead;
-				((IProgress<long>)progress).Report(bytesDownloaded);
+				progress.Report(bytesDownloaded);
 			}
 			return fullFilePath;
+		}
+
+		private static void HandleProgressReport(string name, long value, long contentLength)
+		{
+			var progress = (double)value / contentLength;
+			if (progress >= 0.95)
+				progress = 1;
+			Console.Write($"\r{name} - Скачано ({progress:P2})");
+		}
+
+		private void CreateFolder()
+		{
+			if (!Directory.Exists(_options.OutputDirectory))
+				Directory.CreateDirectory(_options.OutputDirectory);
 		}
 	}
 }

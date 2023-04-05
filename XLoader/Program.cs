@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using XLoader.Contracts;
@@ -26,49 +28,50 @@ namespace XLoader
 			AccessToken.Value = DI.Services.GetRequiredService<IAuthorizeService>().GetTokenAsync(WaitPasswordFromUser()).Result;
 			if (string.IsNullOrEmpty(AccessToken.Value))
 			{
-				Console.WriteLine("Что-то пошло не так");
+				LogError("Что-то пошло не так");
 				return;
 			}
 
 			var fileService = DI.Services.GetRequiredService<IFileService>();
-			var files = fileService.GetFiles(options.ProjectName).Result;
+			var files = fileService.GetFilesAsync(options.ProjectName, options.IsTest).Result;
 			if (!files!.Any())
 			{
-				Console.WriteLine("Файлы не найдены, попробуйте запустить программу с другим параметром поиска.");
+				LogError("Файлы не найдены, попробуйте запустить программу с другим параметром поиска.");
 				return;
 			}
-			DownloadFile(files, fileService);
+			DownloadFilesAsync(files, fileService, options.IsTest).Wait();
+			Console.WriteLine($"\nФайлы скачаны в: {options.OutputDirectory}\nОткрыть расположение? [Д/Н][y/n]");
+			var openAnswer = Console.ReadKey();
+			if (new[] { 'Д', 'Y', 'y', 'д' }.Contains(openAnswer.KeyChar))
+				Process.Start("explorer.exe", options.OutputDirectory);
 		}
 
-		private static void DownloadFile(IDictionary<int, string> files, IFileService fileService)
+		private static async Task DownloadFilesAsync(IDictionary<int, string> files, IFileService fileService, bool isTest)
 		{
 			foreach (var file in files)
 			{
 				Console.WriteLine($"{file.Key} : {file.Value}");
 			}
-			Console.Write("\nКакой файл скачать? Укажите номер: ");
-			if (int.TryParse(Console.ReadLine(), out var index))
+			Console.Write("\nУкажите номера через пробел: ");
+			var answer = Console.ReadLine();
+			foreach (var indexString in answer.Split(' '))
 			{
-				if (files.TryGetValue(index, out var fileName))
+				if (int.TryParse(indexString, out var index))
 				{
-					var result = fileService.DownloadAsync(fileName).Result;
-					if (result == "Error") return;
-
-					Console.WriteLine($"\nФайл скачан: {result}\nОткрыть расположение? [Д/Н]");
-					var openAnswer = Console.ReadKey();
-					if(openAnswer.KeyChar == 'Д' || openAnswer.KeyChar == 'Y' || openAnswer.KeyChar == 'д' || openAnswer.KeyChar == 'y')
-						Process.Start("explorer.exe", Path.GetDirectoryName(result));
+					if (files.TryGetValue(index, out var fileName))
+					{
+						await fileService.DownloadAsync(fileName, isTest);
+						Console.WriteLine();
+					}
+					else
+					{
+						LogError($"\nТакого номера нет - {indexString}!");
+					}
 				}
 				else
 				{
-					LogError("\nТакого номера нет!");
-					DownloadFile(files, fileService);
+					LogError($"\nВвидите число - {indexString}");
 				}
-			}
-			else
-			{
-				LogError("\nВвидите число");
-				DownloadFile(files, fileService);
 			}
 		}
 
@@ -106,11 +109,3 @@ namespace XLoader
 		}
 	}
 }
-//for (int progress = 0; progress <= 100; progress++)
-//{
-//	Console.Write("Загрузка ");
-//	Console.Write(new string('=', progress / 2));
-//	Console.Write(new string(' ', 50 - progress / 2));
-//	Console.Write($" {progress}%\r");
-//	Thread.Sleep(100);
-//}

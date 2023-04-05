@@ -15,14 +15,12 @@ namespace XLoader
 				string appName = Path.GetFileNameWithoutExtension(Environment.GetCommandLineArgs()[0]);
 				string appPath = AppDomain.CurrentDomain.BaseDirectory;
 				var	pathEntries = Environment.GetEnvironmentVariable("PATH").Split(Path.PathSeparator);
-				bool isRegistered = pathEntries.Contains(appPath.Remove(appPath.Length-1));
+				bool isRegistered = pathEntries.Contains(appPath.Remove(appPath.Length-1)) || pathEntries.Contains(appPath);
 				if (!isRegistered)
 				{
-					// Add the program directory to the PATH environment variable
 					var newPath = appPath + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH");
 					Environment.SetEnvironmentVariable("PATH", newPath, EnvironmentVariableTarget.Machine);
 
-					// Register the program name as a command in the registry
 					using (RegistryKey key = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\" + appName))
 					{
 						key.SetValue("", Path.Combine(appPath, appName + ".exe"));

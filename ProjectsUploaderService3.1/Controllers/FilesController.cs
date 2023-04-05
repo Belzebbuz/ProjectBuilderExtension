@@ -22,18 +22,20 @@ namespace ProjectsUploaderService3._1.Controllers
 		{
 			_settings = settings;
 		}
-		[HttpGet("search/{name}")]
-		public IEnumerable<string> SearchFiles(string name)
+		[HttpGet("search/{name}/{isTest}")]
+		public IEnumerable<string> SearchFiles(string name, bool isTest)
 		{
-			var files = Directory.GetFiles(_settings.ReleasesPath)
+			var folderPath = isTest ? _settings.TestPath : _settings.ReleasesPath;
+			var files = Directory.GetFiles(folderPath)
 				.Select(Path.GetFileName);
 			return files.Where(file => file.Contains(name, StringComparison.CurrentCultureIgnoreCase));
 		}
 
-		[HttpGet("download/{name}")]
-		public async Task<IActionResult> DownloadFile(string name)
+		[HttpGet("download/{name}/{isTest}")]
+		public async Task<IActionResult> DownloadFileAsync(string name, bool isTest)
 		{
-			var filePath = Path.Combine(_settings.ReleasesPath, name);
+			var folderPath = isTest ? _settings.TestPath : _settings.ReleasesPath;
+			var filePath = Path.Combine(folderPath, name);
 			if (!System.IO.File.Exists(filePath))
 			{
 				return NotFound();
